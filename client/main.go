@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -28,8 +29,41 @@ func main() {
 	logFatal(err)
 
 	username = strings.Trim(username, " \r\n")
-
 	welcomeMsg := fmt.Sprintf("Welcome %s, to the GoTCP Chat \n", username)
 
-	connection.Write([]byte(welcomeMsg))
+	fmt.Println(welcomeMsg)
+
+	go read(connection)
+	write(connection, username)
+}
+
+func read(connection net.Conn) {
+	for {
+		reader := bufio.NewReader(connection)
+		message, err := reader.ReadString('\n')
+
+		if err == io.EOF {
+			connection.Close()
+			fmt.Println("Connection closed.")
+			os.Exit(0)
+		}
+
+		fmt.Println(message)
+		fmt.Println("-------------------")
+
+	}
+}
+
+func write(connection net.Conn, username string) {
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		message, err := reader.ReadString('\n')
+
+		if err != nil {
+			break
+		}
+
+		message = fmt.Sprintf("%s:- %s\n", username, strings.Trim(message, " \r\n"))
+		connection.Write([]byte(message))
+	}
 }

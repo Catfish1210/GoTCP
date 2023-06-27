@@ -39,12 +39,43 @@ func main() {
 		}
 	}()
 
-	connection := <-newConnection
+	for {
+		select {
+		case conn := <-newConnection:
+			//Invoke broadcaster message (broadcast to other clients/connections)
+			go broadcastMessage(conn)
+		case conn := <-deadConnection:
+			//Remove the connection
+			for item := range openConnections {
+				if item == conn {
+					break
+				}
+			}
+			delete(openConnections, conn)
+		}
+	}
 
-	reader := bufio.NewReader(connection)
+}
 
-	message, err := reader.ReadString('\n')
-	logFatal(err)
+func broadcastMessage(conn net.Conn) {
+	for {
+		reader := bufio.NewReader(conn)
+		message, err := reader.ReadString('\n')
 
-	fmt.Println(message)
+		if err != nil {
+			break
+		}
+
+		//loop through all open connections
+		//send messages to these connections
+		//except the connection that sent the message
+
+		for item := range openConnections {
+			if item != conn {
+				item.Write([]byte(message))
+			}
+		}
+	}
+
+	deadConnection <- conn
 }
